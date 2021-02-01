@@ -1,6 +1,7 @@
 # pi_imprest
 _By mere good fortune, recent experiments in conjuration had ensnared me this imp_
-                                Sacrifice game intro, Shiny Entertainment
+
+Sacrifice game intro, Shiny Entertainment
 
 ## Wait, what? A utility that runs commands via ssh and then emits REST calls? You can do that in bash!
 Yes, you certainly can. But this is portable and can run on a toaster as long as it has python3. And it has imps. I hope you are now imprest!
