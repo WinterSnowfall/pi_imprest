@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 '''
 @author: Winter Snowfall
-@version: 1.00
-@date: 01/02/2021
+@version: 1.10
+@date: 14/02/2021
 '''
 
 import paramiko
@@ -35,14 +35,12 @@ class imp:
     def stretch(self):
         if self.pre_task:
             if self.rest_endpoint is not None:
-                self.errors = None
-                
                 if self.pre_task_payload is not None and self.pre_task_payload != '':
                     requests.post(self.rest_endpoint, json=self.pre_task_payload, headers=self.HEADERS, timeout=self.rest_timeout)
                 else:
-                    self.errors = 'The imp can\'t stretch without a payload!'
+                    raise Exception('The imp can\'t stretch without a payload!')
             else:
-                self.errors = 'The imp can\'t stretch without an endpoint!'
+                raise Exception('The imp can\'t stretch without an endpoint!')
         
     def do(self):
         ssh = paramiko.SSHClient()
@@ -52,13 +50,13 @@ class imp:
         ssh_stdin, ssh_stdout, ssh_stderr = ssh.exec_command(self.command)
         ssh_stdin.close()
         
-        self.output = ssh_stdout.read().decode('utf-8').strip()
-        self.errors = ssh_stderr.read().decode('utf-8').strip()
+        output = ssh_stdout.read().decode('utf-8').strip()
+        self.output = output if output is not None and output != '' else None
+        errors = ssh_stderr.read().decode('utf-8').strip()
+        self.errors = errors if errors is not None and errors != '' else None
 
     def rest(self):
         if self.rest_endpoint is not None:
-            self.errors = None
-            
             if self.output == self.expected:
                 self.last_state = True
                 requests.post(self.rest_endpoint, json=self.payload_true, headers=self.HEADERS, timeout=self.rest_timeout)
@@ -66,4 +64,4 @@ class imp:
                 self.last_state = False
                 requests.post(self.rest_endpoint, json=self.payload_false, headers=self.HEADERS, timeout=self.rest_timeout)
         else:
-            self.errors = 'Can\'t rest the imp without an endpoint!'
+            raise Exception('Can\'t rest the imp without an endpoint!')

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 '''
 @author: Winter Snowfall
-@version: 1.00
-@date: 01/02/2021
+@version: 1.10
+@date: 14/02/2021
 '''
 
 import signal
@@ -28,7 +28,7 @@ logger_file_handler = logging.FileHandler(log_file_full_path, mode='w', encoding
 logger_format = '%(asctime)s %(levelname)s >>> %(message)s'
 logger_file_handler.setFormatter(logging.Formatter(logger_format))
 #logging level for other modules
-logging.basicConfig(format=logger_format, level=logging.WARNING) #DEBUG, INFO, WARNING, ERROR, CRITICAL
+logging.basicConfig(format=logger_format, level=logging.ERROR) #DEBUG, INFO, WARNING, ERROR, CRITICAL
 logger = logging.getLogger(__name__)
 #logging level for current logger
 logger.setLevel(logging.INFO) #DEBUG, INFO, WARNING, ERROR, CRITICAL
@@ -111,32 +111,44 @@ try:
         logger.info('The bell rings...')
         
         for imp in imp_tasks:
+            logger.info('-----------------------------------------------')
             logger.info(f'The imp named {imp.name} has awakened!')
             
             logger.info(f'The imp is stretching...')
-            imp.stretch()
-            #the study of the arcane has shown imps must strech for at least half a second
-            sleep(0.5)
-            
-            if imp.errors is not None:
-                logger.error(f'The imp has encountered an error: {imp.errors}')
+            try:
+                imp.stretch()
+                #the study of the arcane has shown imps must strech for at least half a second
+                sleep(0.5)
+            except:
+                logger.exception(f'The imp has encountered an error...')
+                #logger.error(traceback.format_exc())
             
             logger.info(f'The imp is doing his task...')
-            imp.do()
+            try:
+                imp.do()
             
-            logger.debug(f'Imp output is: {imp.output}')
-            if imp.errors is not None:
-                logger.error(f'The imp has encountered an error: {imp.errors}')
+                logger.debug(f'Imp output is: {imp.output}')
+                if imp.errors is not None:
+                    logger.error(f'The imp has encountered an ssh error: {imp.errors}')
+                    
+            except:
+                logger.exception(f'The imp has encountered an error...')
+                #logger.error(traceback.format_exc())
             
             logger.info(f'The imp has started resting...')
-            imp.rest()
+            try:
+                imp.rest()
+                
+                logger.info(f'{imp.last_state} is the outcome of the imp\'s task.')
             
-            logger.info(f'{imp.last_state} is the outcome of the imp\'s task.')
-            
-            if imp.errors is not None:
-                logger.error(f'The imp has encountered an error: {imp.errors}')
+            except:
+                logger.exception(f'The imp has encountered an error...')
+                #logger.error(traceback.format_exc())
                 
             logger.info('The imp now sleeps.')
+            
+        if len(imp_tasks) > 0:
+            logger.info('-----------------------------------------------')
                 
         logger.info('All imps are now asleep, waiting for the bell to ring.')
         sleep(TASK_INTERVAL)
