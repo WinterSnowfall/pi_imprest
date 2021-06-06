@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 '''
 @author: Winter Snowfall
-@version: 1.10
-@date: 14/02/2021
+@version: 1.20
+@date: 06/06/2021
 '''
 
 import signal
@@ -72,8 +72,10 @@ current_task_no = 1
 
 try:
     while True:
+        #designation of the imp task
+        current_task_header = f'TASK{current_task_no}'
         #reading from config file
-        current_task_section = configParser[f'TASK{current_task_no}']
+        current_task_section = configParser[current_task_header]
         #name of the imp task
         current_task_name = current_task_section.get('name')
         #ip address or hostname of the remote host
@@ -86,6 +88,8 @@ try:
         current_task_command = current_task_section.get('command')
         #expected output of the command
         current_task_expected = current_task_section.get('expected')
+        #enable dynamic loading mode of expected values - true will enable a reload on each imp run
+        current_task_expected_dynamic_loading = current_task_section.getboolean('expected_dynamic_loading')
         #REST payload to be sent in case the command output matches expectations
         current_task_payload_true = json.loads(current_task_section.get('payload_true'))
         #REST payload to be sent in case the command output does not match expectations
@@ -95,9 +99,9 @@ try:
         #REST payload to be sent during pre-tasks
         current_task_pre_tasl_payload = json.loads(current_task_section.get('pre_task_payload'))
 
-        imp_tasks.append(imp(current_task_name, current_task_ip, current_task_username, current_task_password, 
-                             current_task_command, current_task_expected, current_task_payload_true, current_task_payload_false, 
-                             current_task_pre_task, current_task_pre_tasl_payload))
+        imp_tasks.append(imp(current_task_header, current_task_name, current_task_ip, current_task_username, current_task_password, 
+                             current_task_command, current_task_expected, current_task_expected_dynamic_loading, current_task_payload_true, 
+                             current_task_payload_false, current_task_pre_task, current_task_pre_tasl_payload))
         current_task_no += 1
         
 except KeyError:
@@ -125,6 +129,13 @@ try:
             
             logger.info(f'The imp is doing his task...')
             try:
+                if imp.expected_dynamic_loading:
+                    logger.info(f'The imp is dynamic. Reloading expected value...')                
+                    #reload config file
+                    configParser.read(conf_file_full_path)
+                    #update imp's expected value
+                    imp.expected = configParser[imp.header].get('expected')
+                
                 imp.do()
             
                 logger.debug(f'Imp output is: {imp.output}')
