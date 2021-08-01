@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 '''
 @author: Winter Snowfall
-@version: 1.20
-@date: 06/06/2021
+@version: 1.30
+@date: 01/08/2021
 '''
 
 import signal
 import json
 import logging
+from requests.exceptions import ConnectionError
 from configparser import ConfigParser
 from os import path
 from time import sleep
@@ -123,6 +124,12 @@ try:
                 imp.stretch()
                 #the study of the arcane has shown imps must strech for at least half a second
                 sleep(0.5)
+                
+            #halt process in case the REST endpoint can not be reached
+            except ConnectionError:
+                logger.critical(f'The imp could not reach REST endpoint. Terminating process.')
+                raise SystemExit(3)
+                
             except:
                 logger.exception(f'The imp has encountered an error...')
                 #logger.error(traceback.format_exc())
@@ -151,7 +158,12 @@ try:
                 imp.rest()
                 
                 logger.info(f'{imp.last_state} is the outcome of the imp\'s task.')
-            
+                
+            #halt process in case the REST endpoint can not be reached
+            except ConnectionError:
+                logger.critical(f'The imp could not reach REST endpoint. Terminating process.')
+                raise SystemExit(3)
+                
             except:
                 logger.exception(f'The imp has encountered an error...')
                 #logger.error(traceback.format_exc())
