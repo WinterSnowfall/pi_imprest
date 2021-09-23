@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 '''
 @author: Winter Snowfall
-@version: 1.10
-@date: 01/02/2021
+@version: 1.40
+@date: 23/09/2021
 '''
 
 import os

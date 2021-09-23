@@ -1,14 +1,13 @@
 #!/usr/bin/env python3
 '''
 @author: Winter Snowfall
-@version: 1.30
-@date: 01/08/2021
+@version: 1.40
+@date: 23/09/2021
 '''
 
 import signal
 import json
 import logging
-from requests.exceptions import ConnectionError
 from configparser import ConfigParser
 from os import path
 from time import sleep

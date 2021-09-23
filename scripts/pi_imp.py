@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 '''
 @author: Winter Snowfall
-@version: 1.30
-@date: 01/08/2021
+@version: 1.40
+@date: 23/09/2021
 '''
 
 import paramiko
@@ -58,8 +58,8 @@ class imp:
             self.output = output if output is not None and output != '' else None
             errors = ssh_stderr.read().decode('utf-8').strip()
             self.errors = errors if errors is not None and errors != '' else None
-        except Exception:
-            raise
+        except:
+            raise Exception('The imp has failed its task!')
         finally:
             ssh.close()
 
