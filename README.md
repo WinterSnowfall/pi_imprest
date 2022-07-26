@@ -33,5 +33,5 @@ Why, yes. Why bother with passwords anyway, right? You'll need to set:
 ssh_key_authentication = true
 ```
 
-In the .conf file and provide the path to your private ssh key. Doing so will make pi_boincmon ignore all (if any) host password entries. Note that you'll have to take care of propagating the key yourself and configuring a working ssh setup between the local host and your imp hosts.
+In the .conf file and provide the path to your private ssh key. Doing so will make pi_imprest ignore all (if any) host password entries. Note that you'll have to take care of propagating the key yourself and configuring a working ssh setup between the local host and your imp hosts.
 
