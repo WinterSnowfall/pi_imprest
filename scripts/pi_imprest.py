@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 '''
 @author: Winter Snowfall
-@version: 1.40
-@date: 23/09/2021
+@version: 2.00
+@date: 26/07/2022
 '''
 
+import paramiko
 import signal
 import json
 import logging
@@ -18,6 +19,9 @@ from pi_imp import imp
 
 ##global parameters init
 configParser = ConfigParser()
+loopRunner = True
+imp_tasks = []
+current_task_no = 1
 
 ##conf file block
 conf_file_full_path = path.join('..', 'conf', 'imp_tasks.conf')
@@ -38,13 +42,6 @@ def sigterm_handler(signum, frame):
     logger.info('Stopping boincmon due to SIGTERM...')
     raise SystemExit(0)
 
-#read the master password from the command line
-password = input('Please enter the master password: ')
-
-if password == '':
-    logger.critical('No password has been provided - exiting.')
-    raise SystemExit(1)
-
 logger.info('The imps are being summoned...')
 
 try:
@@ -52,23 +49,43 @@ try:
     configParser.read(conf_file_full_path)
     general_section = configParser['GENERAL']
     
+    #note that the cron job mode is meant to be used primarily with ssh key authentication
+    CRON_JOB_MODE = general_section.getboolean('cron_job_mode')
     REST_ENDPOINT = general_section.get('rest_endpoint')
     REST_TIMEOUT = general_section.getint('rest_timeout')
-    TASK_INTERVAL = general_section.getint('task_interval')
+    if not CRON_JOB_MODE:
+        TASK_INTERVAL = general_section.getint('task_interval')
+    SSH_KEY_AUTHENTICATION = general_section.getboolean('ssh_key_authentication')
+    if SSH_KEY_AUTHENTICATION:
+        SSH_PRIVATE_KEY_PATH = path.expanduser(general_section.get('ssh_private_key_path'))
     SSH_TIMEOUT = general_section.getint('ssh_timeout')
-    PRE_TASK_PAYLOAD = general_section.get('pre_task_payload')
     
 except:
     logger.critical('Could not parse configuration file. Please make sure the appropriate structure is in place!')
-    raise SystemExit(2)
+    raise SystemExit(1)
 
+if SSH_KEY_AUTHENTICATION:
+    try:
+        SSH_PRIVATE_KEY = paramiko.RSAKey.from_private_key_file(SSH_PRIVATE_KEY_PATH)
+    #paramiko supports the OpenSSH private key format starting with version 2.7.1
+    except paramiko.ssh_exception.SSHException:
+        #can be converted with 'ssh-keygen -p -m PEM -f id_rsa'
+        logger.critical('Could not parse SSH key. Either upgrade paramiko or convert your SSH key to the PEM format!')
+        raise SystemExit(2)
+else:
+    #read the master password from the command line
+    password = input('Please enter the master password: ')
+
+    if password == '':
+        logger.critical('No password has been provided - exiting.')
+        raise SystemExit(3)
+    
+    psw_helper = password_helper()
+    
 imp.rest_endpoint = REST_ENDPOINT
 imp.rest_timeout = REST_TIMEOUT
+imp.ssh_private_key = SSH_PRIVATE_KEY
 imp.ssh_timeout = SSH_TIMEOUT
-
-psw_helper = password_helper()
-imp_tasks = []
-current_task_no = 1
 
 try:
     while True:
@@ -82,8 +99,11 @@ try:
         current_task_ip = current_task_section.get('ip')
         #username used for the ssh connection
         current_task_username = current_task_section.get('username')
-        #encrypted password of the above user - use the password utilities script to get the encrypted text
-        current_task_password = psw_helper.decrypt_password(password, current_task_section.get('password'))
+        if not SSH_KEY_AUTHENTICATION:
+            #encrypted password of the above user - use the password utilities script to get the encrypted text
+            current_task_password = psw_helper.decrypt_password(password, current_task_section.get('password'))
+        else:
+            current_task_password = None
         #command or command list to be executed via ssh
         current_task_command = current_task_section.get('command')
         #expected output of the command
@@ -97,46 +117,47 @@ try:
         #enables/disables pre-task REST call used to signal activity
         current_task_pre_task = current_task_section.getboolean('pre_task')
         #REST payload to be sent during pre-tasks
-        current_task_pre_tasl_payload = json.loads(current_task_section.get('pre_task_payload'))
+        current_task_pre_task_payload = json.loads(current_task_section.get('pre_task_payload'))
 
         imp_tasks.append(imp(current_task_header, current_task_name, current_task_ip, current_task_username, current_task_password, 
                              current_task_command, current_task_expected, current_task_expected_dynamic_loading, current_task_payload_true, 
-                             current_task_payload_false, current_task_pre_task, current_task_pre_tasl_payload))
+                             current_task_payload_false, current_task_pre_task, current_task_pre_task_payload))
         current_task_no += 1
         
 except KeyError:
     logger.info(f'Task lore parsing complete. Read {current_task_no - 1} imp tasks.')
     
+if CRON_JOB_MODE:
+    logger.info('Cron job mode enabled. The imps will be freed after one whip lash.')
+    
 #catch SIGTERM and exit gracefully
 signal.signal(signal.SIGTERM, sigterm_handler)
 
 try:
-    while True:
+    while loopRunner:
         logger.info('The bell rings...')
         
         for imp in imp_tasks:
-            logger.info('-----------------------------------------------')
-            logger.info(f'The imp named {imp.name} has awakened!')
+            imp_logger_prefix = f'{imp.name} >>>'
             
-            logger.info(f'The imp is stretching...')
+            logger.info('-----------------------------------------------')
+            logger.info(f'{imp_logger_prefix} The imp has awakened.')
+            
+            logger.info(f'{imp_logger_prefix} The imp is stretching...')
             try:
                 imp.stretch()
                 #the study of the arcane has shown imps must strech for at least half a second
                 sleep(0.5)
-                
-            #halt process in case the REST endpoint can not be reached
             except ConnectionError:
-                logger.critical(f'The imp could not reach REST endpoint. Terminating process.')
-                raise SystemExit(3)
-                
+                logger.warning(f'{imp_logger_prefix} The imp could not reach REST endpoint.')
             except:
-                logger.exception(f'The imp has encountered an error...')
+                logger.exception(f'{imp_logger_prefix} The imp has encountered an error...')
                 #logger.error(traceback.format_exc())
             
-            logger.info(f'The imp is doing his task...')
+            logger.info(f'{imp_logger_prefix} The imp is doing his task...')
             try:
                 if imp.expected_dynamic_loading:
-                    logger.info(f'The imp is dynamic. Reloading expected value...')                
+                    logger.info(f'{imp_logger_prefix} The imp is dynamic. Reloading expected value...')                
                     #reload config file
                     configParser.read(conf_file_full_path)
                     #update imp's expected value
@@ -144,36 +165,37 @@ try:
                 
                 imp.do()
             
-                logger.debug(f'Imp output is: {imp.output}')
+                logger.debug(f'{imp_logger_prefix} Imp output is: {imp.output}')
                 if imp.errors is not None:
-                    logger.error(f'The imp has encountered an ssh error: {imp.errors}')
+                    logger.error(f'{imp_logger_prefix} The imp has encountered an ssh error: {imp.errors}')
+                    
+                imp.report()
+                
+                logger.info(f'{imp_logger_prefix} {imp.state} is the outcome of the imp\'s task.')
                     
             except:
-                logger.exception(f'The imp has encountered an error...')
+                logger.exception(f'{imp_logger_prefix} The imp has encountered an error...')
                 #logger.error(traceback.format_exc())
             
-            logger.info(f'The imp has started resting...')
+            logger.info(f'{imp_logger_prefix} The imp has started resting...')
             try:
                 imp.rest()
-                
-                logger.info(f'{imp.last_state} is the outcome of the imp\'s task.')
-                
-            #halt process in case the REST endpoint can not be reached
             except ConnectionError:
-                logger.critical(f'The imp could not reach REST endpoint. Terminating process.')
-                raise SystemExit(3)
-                
+                logger.warning(f'{imp_logger_prefix} The imp could not reach REST endpoint') 
             except:
-                logger.exception(f'The imp has encountered an error...')
+                logger.exception(f'{imp_logger_prefix} The imp has encountered an error...')
                 #logger.error(traceback.format_exc())
                 
-            logger.info('The imp now sleeps.')
+            logger.info(f'{imp_logger_prefix} The imp now sleeps.')
             
         if len(imp_tasks) > 0:
             logger.info('-----------------------------------------------')
                 
-        logger.info('All imps are now asleep, waiting for the bell to ring.')
-        sleep(TASK_INTERVAL)
+        if CRON_JOB_MODE:
+            loopRunner = False
+        else:
+            logger.info('All imps are now asleep, waiting for the bell to ring.')
+            sleep(TASK_INTERVAL)
         
 except KeyboardInterrupt:
     pass
