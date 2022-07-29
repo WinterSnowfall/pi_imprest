@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 '''
 @author: Winter Snowfall
-@version: 2.00
-@date: 26/07/2022
+@version: 2.01
+@date: 28/07/2022
 '''
 
 import paramiko
