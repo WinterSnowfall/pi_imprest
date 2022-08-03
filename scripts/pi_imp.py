@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 '''
 @author: Winter Snowfall
-@version: 2.01
-@date: 28/07/2022
+@version: 2.10
+@date: 02/08/2022
 '''
 
 import paramiko
@@ -50,25 +50,23 @@ class imp:
         self.output = None
         self.errors = None
         
-        ssh = paramiko.SSHClient()
-        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        with paramiko.SSHClient() as ssh:
+            ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
          
-        try:
-            if self.ssh_private_key is not None:
-                ssh.connect(self.ip, username=self.username, pkey=self.ssh_private_key, timeout=self.ssh_timeout)
-            else:
-                ssh.connect(self.ip, username=self.username, password=self.password, timeout=self.ssh_timeout)
-            ssh_stdin, ssh_stdout, ssh_stderr = ssh.exec_command(self.command)
-            ssh_stdin.close()
-            
-            output = ssh_stdout.read().decode('utf-8').strip()
-            self.output = output if output is not None and output != '' else None
-            errors = ssh_stderr.read().decode('utf-8').strip()
-            self.errors = errors if errors is not None and errors != '' else None
-        except:
-            raise Exception('The imp has failed its task!')
-        finally:
-            ssh.close()
+            try:
+                if self.ssh_private_key is not None:
+                    ssh.connect(self.ip, username=self.username, pkey=self.ssh_private_key, timeout=self.ssh_timeout)
+                else:
+                    ssh.connect(self.ip, username=self.username, password=self.password, timeout=self.ssh_timeout)
+                ssh_stdin, ssh_stdout, ssh_stderr = ssh.exec_command(self.command)
+                ssh_stdin.close()
+                
+                output = ssh_stdout.read().decode('utf-8').strip()
+                self.output = output if output is not None and output != '' else None
+                errors = ssh_stderr.read().decode('utf-8').strip()
+                self.errors = errors if errors is not None and errors != '' else None
+            except:
+                raise Exception('The imp has failed its task!')
             
     def report(self):
         if self.output is not None and self.output == self.expected:
