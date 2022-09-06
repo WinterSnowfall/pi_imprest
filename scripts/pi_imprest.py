@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 '''
 @author: Winter Snowfall
-@version: 2.10
-@date: 02/08/2022
+@version: 2.20
+@date: 02/09/2022
 '''
 
 import paramiko
@@ -95,6 +95,8 @@ try:
         current_task_section = configParser[current_task_header]
         #name of the imp task
         current_task_name = current_task_section.get('name')
+        #state of the imp task
+        current_task_active = current_task_section.getboolean('active')
         #ip address or hostname of the remote host
         current_task_ip = current_task_section.get('ip')
         #username used for the ssh connection
@@ -108,8 +110,6 @@ try:
         current_task_command = current_task_section.get('command')
         #expected output of the command
         current_task_expected = current_task_section.get('expected')
-        #enable dynamic loading mode of expected values - true will enable a reload on each imp run
-        current_task_expected_dynamic_loading = current_task_section.getboolean('expected_dynamic_loading')
         #REST payload to be sent in case the command output matches expectations
         current_task_payload_true = json.loads(current_task_section.get('payload_true'))
         #REST payload to be sent in case the command output does not match expectations
@@ -119,8 +119,8 @@ try:
         #REST payload to be sent during pre-tasks
         current_task_pre_task_payload = json.loads(current_task_section.get('pre_task_payload'))
 
-        imp_tasks.append(imp(current_task_header, current_task_name, current_task_ip, current_task_username, current_task_password, 
-                             current_task_command, current_task_expected, current_task_expected_dynamic_loading, current_task_payload_true, 
+        imp_tasks.append(imp(current_task_header, current_task_name, current_task_active, current_task_ip, current_task_username, 
+                             current_task_password, current_task_command, current_task_expected, current_task_payload_true, 
                              current_task_payload_false, current_task_pre_task, current_task_pre_task_payload))
         current_task_no += 1
         
@@ -141,53 +141,58 @@ try:
             imp_logger_prefix = f'{imp.name} >>>'
             
             logger.info('-----------------------------------------------')
-            logger.info(f'{imp_logger_prefix} The imp has awakened.')
             
-            logger.info(f'{imp_logger_prefix} The imp is stretching...')
-            try:
-                imp.stretch()
-                #the study of the arcane has shown imps must strech for at least half a second
-                sleep(0.5)
-            except ConnectionError:
-                logger.warning(f'{imp_logger_prefix} The imp could not reach REST endpoint.')
-            except:
-                logger.exception(f'{imp_logger_prefix} The imp has encountered an error...')
-                #logger.error(traceback.format_exc())
-            
-            logger.info(f'{imp_logger_prefix} The imp is doing his task...')
-            try:
-                if imp.expected_dynamic_loading:
-                    logger.info(f'{imp_logger_prefix} The imp is dynamic. Reloading expected value...')                
-                    #reload config file
-                    configParser.read(conf_file_full_path)
-                    #update imp's expected value
-                    imp.expected = configParser[imp.header].get('expected')
+            if imp.active:
+                logger.info(f'{imp_logger_prefix} The imp has awakened.')
                 
-                imp.do()
-            
-                logger.debug(f'{imp_logger_prefix} Imp output is: {imp.output}')
-                if imp.errors is not None:
-                    logger.error(f'{imp_logger_prefix} The imp has encountered an ssh error: {imp.errors}')
+                logger.info(f'{imp_logger_prefix} The imp is stretching...')
+                try:
+                    imp.stretch()
+                    #the study of the arcane has shown imps must strech for at least half a second
+                    sleep(0.5)
+                except ConnectionError:
+                    logger.warning(f'{imp_logger_prefix} The imp could not reach REST endpoint.')
+                except:
+                    logger.exception(f'{imp_logger_prefix} The imp has encountered an error...')
+                    #logger.error(traceback.format_exc())
+                
+                logger.info(f'{imp_logger_prefix} The imp is doing his task...')
+                try:
+                    #dynamically reload expected values when not in cron job mode
+                    if not CRON_JOB_MODE:
+                        #reload config file
+                        configParser.read(conf_file_full_path)
+                        #update imp's expected value
+                        imp.expected = configParser[imp.header].get('expected')
                     
-                imp.report()
+                    imp.do()
                 
-                logger.info(f'{imp_logger_prefix} {imp.state} is the outcome of the imp\'s task.')
+                    logger.debug(f'{imp_logger_prefix} Imp output is: {imp.output}')
+                    if imp.errors is not None:
+                        logger.error(f'{imp_logger_prefix} The imp has encountered an ssh error: {imp.errors}')
+                        
+                    imp.report()
                     
-            except:
-                logger.exception(f'{imp_logger_prefix} The imp has encountered an error...')
-                #logger.error(traceback.format_exc())
-            
-            logger.info(f'{imp_logger_prefix} The imp has started resting...')
-            try:
-                imp.rest()
-            except ConnectionError:
-                logger.warning(f'{imp_logger_prefix} The imp could not reach REST endpoint') 
-            except:
-                logger.exception(f'{imp_logger_prefix} The imp has encountered an error...')
-                #logger.error(traceback.format_exc())
+                    logger.info(f'{imp_logger_prefix} {imp.state} is the outcome of the imp\'s task.')
+                        
+                except:
+                    logger.exception(f'{imp_logger_prefix} The imp has encountered an error...')
+                    #logger.error(traceback.format_exc())
                 
-            logger.info(f'{imp_logger_prefix} The imp now sleeps.')
+                logger.info(f'{imp_logger_prefix} The imp has started resting...')
+                try:
+                    imp.rest()
+                except ConnectionError:
+                    logger.warning(f'{imp_logger_prefix} The imp could not reach REST endpoint') 
+                except:
+                    logger.exception(f'{imp_logger_prefix} The imp has encountered an error...')
+                    #logger.error(traceback.format_exc())
+                    
+                logger.info(f'{imp_logger_prefix} The imp now sleeps.')
             
+            else:
+                logger.info(f'{imp_logger_prefix} The imp remains locked up for now.')
+                
         if len(imp_tasks) > 0:
             logger.info('-----------------------------------------------')
                 

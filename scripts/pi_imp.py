@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 '''
 @author: Winter Snowfall
-@version: 2.10
-@date: 02/08/2022
+@version: 2.20
+@date: 02/09/2022
 '''
 
 import paramiko
@@ -18,10 +18,11 @@ class imp:
     ssh_private_key = None
     ssh_timeout = 10
 
-    def __init__(self, header, name, ip, username, password, command, expected, 
-                 expected_dynamic_loading, payload_true, payload_false, pre_task, pre_task_payload):
+    def __init__(self, header, name, active, ip, username, password, command, 
+                 expected, payload_true, payload_false, pre_task, pre_task_payload):
         self.header = header
         self.name = name
+        self.active = active
         self.ip = ip
         self.username = username
         self.password = password
@@ -29,7 +30,6 @@ class imp:
         self.output = None
         self.errors = None
         self.expected = expected
-        self.expected_dynamic_loading = expected_dynamic_loading
         self.payload_true = payload_true
         self.payload_false = payload_false
         self.pre_task = pre_task
