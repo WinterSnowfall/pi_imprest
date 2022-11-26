@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 '''
 @author: Winter Snowfall
-@version: 2.20
-@date: 02/09/2022
+@version: 2.30
+@date: 24/11/2022
 '''
 
 import paramiko
@@ -12,7 +12,7 @@ class imp:
     '''An imp - a mythical creature that sometimes does things, but mostly rests'''
     
     HEADERS = {'content-type': 'application/json'}
-    #default static values, should be overwritten when creating an imp
+    #default values, should be overwritten when creating an imp
     rest_endpoint = None
     rest_timeout = 10
     ssh_private_key = None
@@ -73,6 +73,12 @@ class imp:
             self.state = True
         else:
             self.state = False
+            
+    def idle(self):
+        if self.rest_endpoint is not None:
+            requests.post(self.rest_endpoint, json=self.payload_true, headers=self.HEADERS, timeout=self.rest_timeout)
+        else:
+            raise Exception('The imp can\'t idle without an endpoint!')
 
     def rest(self):
         if self.rest_endpoint is not None:
