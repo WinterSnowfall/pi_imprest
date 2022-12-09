@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 '''
 @author: Winter Snowfall
-@version: 2.30
-@date: 24/11/2022
+@version: 2.40
+@date: 10/12/2022
 '''
 
 import paramiko
@@ -17,9 +17,9 @@ class imp:
     rest_timeout = 10
     ssh_private_key = None
     ssh_timeout = 10
-
-    def __init__(self, header, name, active, ip, username, password, command, 
-                 expected, payload_true, payload_false, pre_task, pre_task_payload):
+    
+    def __init__(self, header, name, active, ip, username, password, command, expected, 
+                 payload_true, payload_false, pre_task, pre_task_payload, pre_task_duration):
         self.header = header
         self.name = name
         self.active = active
@@ -34,8 +34,9 @@ class imp:
         self.payload_false = payload_false
         self.pre_task = pre_task
         self.pre_task_payload = pre_task_payload
+        self.pre_task_duration = pre_task_duration
         self.state = None
-        
+    
     def stretch(self):
         if self.pre_task:
             if self.rest_endpoint is not None:
@@ -45,14 +46,14 @@ class imp:
                     raise Exception('The imp can\'t stretch without a payload!')
             else:
                 raise Exception('The imp can\'t stretch without an endpoint!')
-        
-    def do(self):
+    
+    def work(self):
         self.output = None
         self.errors = None
         
         with paramiko.SSHClient() as ssh:
             ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-         
+            
             try:
                 if self.ssh_private_key is not None:
                     ssh.connect(self.ip, username=self.username, pkey=self.ssh_private_key, timeout=self.ssh_timeout)
@@ -67,19 +68,19 @@ class imp:
                 self.errors = errors if errors is not None and errors != '' else None
             except:
                 raise Exception('The imp has failed its task!')
-            
+    
     def report(self):
         if self.output is not None and self.output == self.expected:
             self.state = True
         else:
             self.state = False
-            
+    
     def idle(self):
         if self.rest_endpoint is not None:
             requests.post(self.rest_endpoint, json=self.payload_true, headers=self.HEADERS, timeout=self.rest_timeout)
         else:
             raise Exception('The imp can\'t idle without an endpoint!')
-
+    
     def rest(self):
         if self.rest_endpoint is not None:
             if self.state:
