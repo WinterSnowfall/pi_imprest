@@ -28,8 +28,8 @@ logger_file_handler.setFormatter(logging.Formatter(logger_format))
 #logging level for other modules
 logging.basicConfig(format=logger_format, level=logging.ERROR) #DEBUG, INFO, WARNING, ERROR, CRITICAL
 logger = logging.getLogger(__name__)
-#logging level for current logger
-logger.setLevel(logging.INFO) #DEBUG, INFO, WARNING, ERROR, CRITICAL
+#logging level defaults to INFO, but can be later modified through config file values
+logger.setLevel(logging.INFO)
 logger.addHandler(logger_file_handler)
 
 def sigterm_handler(signum, frame):
@@ -48,14 +48,27 @@ if __name__ == "__main__":
     #catch SIGINT and exit gracefully
     signal.signal(signal.SIGINT, sigint_handler)
     
-    logger.info('The imps are being summoned...')
-    
     configParser = ConfigParser()
     
     try:
         #reading from config file
         configParser.read(conf_file_full_path)
+        
         general_section = configParser['GENERAL']
+        LOGGING_LEVEL = general_section.get('logging_level').upper()
+        
+        #DEBUG, INFO, WARNING, ERROR, CRITICAL
+        #remains set to INFO if none of the other valid log levels are specified
+        if LOGGING_LEVEL == 'INFO':
+            pass
+        elif LOGGING_LEVEL == 'DEBUG':
+            logger.setLevel(logging.DEBUG)
+        elif LOGGING_LEVEL == 'WARNING':
+            logger.setLevel(logging.WARNING)
+        elif LOGGING_LEVEL == 'ERROR':
+            logger.setLevel(logging.ERROR)
+        elif LOGGING_LEVEL == 'CRITICAL':
+            logger.setLevel(logging.CRITICAL)
         
         #note that the cron job mode is meant to be used primarily with ssh key authentication
         CRON_JOB_MODE = general_section.getboolean('cron_job_mode')
@@ -89,6 +102,8 @@ if __name__ == "__main__":
             raise SystemExit(3)
         
         psw_helper = password_helper()
+        
+    logger.info('The imps are being summoned...')
     
     imp.rest_endpoint = REST_ENDPOINT
     imp.rest_timeout = REST_TIMEOUT
@@ -162,8 +177,6 @@ if __name__ == "__main__":
                 try:
                     imp.stretch()
                     sleep(imp.pre_task_duration)
-                except ConnectionError:
-                    logger.warning(f'{imp_logger_prefix} The imp could not reach REST endpoint.')
                 except:
                     logger.exception(f'{imp_logger_prefix} The imp has encountered an error...')
                     #logger.error(traceback.format_exc())
@@ -195,8 +208,6 @@ if __name__ == "__main__":
                     logger.info(f'{imp_logger_prefix} The imp has started resting...')
                     try:
                         imp.rest()
-                    except ConnectionError:
-                        logger.warning(f'{imp_logger_prefix} The imp could not reach REST endpoint')
                     except:
                         logger.exception(f'{imp_logger_prefix} The imp has encountered an error...')
                         #logger.error(traceback.format_exc())
@@ -205,8 +216,6 @@ if __name__ == "__main__":
                     logger.info(f'{imp_logger_prefix} The imp will remain idle and only pretend to work...')
                     try:
                         imp.idle()
-                    except ConnectionError:
-                        logger.warning(f'{imp_logger_prefix} The imp could not reach REST endpoint')
                     except:
                         logger.exception(f'{imp_logger_prefix} The imp has encountered an error...')
                         #logger.error(traceback.format_exc())

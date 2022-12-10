@@ -41,7 +41,10 @@ class imp:
         if self.pre_task:
             if self.rest_endpoint is not None:
                 if self.pre_task_payload is not None and self.pre_task_payload != '':
-                    requests.post(self.rest_endpoint, json=self.pre_task_payload, headers=self.HEADERS, timeout=self.rest_timeout)
+                    try:
+                        requests.post(self.rest_endpoint, json=self.pre_task_payload, headers=self.HEADERS, timeout=self.rest_timeout)
+                    except:
+                        raise Exception('The imp couldn\'t reach the REST endpoint!')
                 else:
                     raise Exception('The imp can\'t stretch without a payload!')
             else:
@@ -77,15 +80,21 @@ class imp:
     
     def idle(self):
         if self.rest_endpoint is not None:
-            requests.post(self.rest_endpoint, json=self.payload_true, headers=self.HEADERS, timeout=self.rest_timeout)
+            try:
+                requests.post(self.rest_endpoint, json=self.payload_true, headers=self.HEADERS, timeout=self.rest_timeout)
+            except:
+                raise Exception('The imp couldn\'t reach the REST endpoint!')
         else:
             raise Exception('The imp can\'t idle without an endpoint!')
     
     def rest(self):
         if self.rest_endpoint is not None:
-            if self.state:
-                requests.post(self.rest_endpoint, json=self.payload_true, headers=self.HEADERS, timeout=self.rest_timeout)
-            else:
-                requests.post(self.rest_endpoint, json=self.payload_false, headers=self.HEADERS, timeout=self.rest_timeout)
+            try:
+                if self.state:
+                    requests.post(self.rest_endpoint, json=self.payload_true, headers=self.HEADERS, timeout=self.rest_timeout)
+                else:
+                    requests.post(self.rest_endpoint, json=self.payload_false, headers=self.HEADERS, timeout=self.rest_timeout)  
+            except:
+                raise Exception('The imp couldn\'t reach the REST endpoint!')
         else:
             raise Exception('Can\'t rest the imp without an endpoint!')
