@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 '''
 @author: Winter Snowfall
-@version: 2.40
-@date: 10/12/2022
+@version: 2.41
+@date: 30/12/2022
 '''
 
 import paramiko
@@ -48,7 +48,8 @@ if __name__ == "__main__":
     #catch SIGINT and exit gracefully
     signal.signal(signal.SIGINT, sigint_handler)
     
-    configParser = ConfigParser()
+    #disable interpolation to allow the use of unescaped '%' in command strings
+    configParser = ConfigParser(interpolation=None)
     
     try:
         #reading from config file
