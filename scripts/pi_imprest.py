@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 '''
 @author: Winter Snowfall
-@version: 2.41
-@date: 30/12/2022
+@version: 2.42
+@date: 26/06/2023
 '''
 
 import paramiko
@@ -14,22 +14,22 @@ from os import path
 from time import sleep
 from pi_password import password_helper
 from pi_imp import imp
-#uncomment for debugging purposes only
+# uncomment for debugging purposes only
 #import traceback
 
-##conf file block
-conf_file_full_path = path.join('..', 'conf', 'imp_tasks.conf')
+# conf file block
+CONF_FILE_PATH = path.join('..', 'conf', 'imp_tasks.conf')
 
-##logging configuration block
-log_file_full_path = path.join('..', 'logs', 'pi_imprest.log')
-logger_file_handler = logging.FileHandler(log_file_full_path, encoding='utf-8')
-logger_format = '%(asctime)s %(levelname)s >>> %(message)s'
-logger_file_handler.setFormatter(logging.Formatter(logger_format))
-#logging level for other modules
-logging.basicConfig(format=logger_format, level=logging.ERROR) #DEBUG, INFO, WARNING, ERROR, CRITICAL
+# logging configuration block
+LOG_FILE_PATH = path.join('..', 'logs', 'pi_imprest.log')
+logger_file_handler = logging.FileHandler(LOG_FILE_PATH, encoding='utf-8')
+LOGGER_FORMAT = '%(asctime)s %(levelname)s >>> %(message)s'
+logger_file_handler.setFormatter(logging.Formatter(LOGGER_FORMAT))
+# logging level for other modules
+logging.basicConfig(format=LOGGER_FORMAT, level=logging.ERROR)
 logger = logging.getLogger(__name__)
-#logging level defaults to INFO, but can be later modified through config file values
-logger.setLevel(logging.INFO)
+# logging level defaults to INFO, but can be later modified through config file values
+logger.setLevel(logging.INFO) # DEBUG, INFO, WARNING, ERROR, CRITICAL
 logger.addHandler(logger_file_handler)
 
 def sigterm_handler(signum, frame):
@@ -43,26 +43,22 @@ def sigint_handler(signum, frame):
     raise SystemExit(0)
 
 if __name__ == "__main__":
-    #catch SIGTERM and exit gracefully
+    # catch SIGTERM and exit gracefully
     signal.signal(signal.SIGTERM, sigterm_handler)
-    #catch SIGINT and exit gracefully
+    # catch SIGINT and exit gracefully
     signal.signal(signal.SIGINT, sigint_handler)
     
-    #disable interpolation to allow the use of unescaped '%' in command strings
+    # disable interpolation to allow the use of unescaped '%' in command strings
     configParser = ConfigParser(interpolation=None)
     
     try:
-        #reading from config file
-        configParser.read(conf_file_full_path)
+        configParser.read(CONF_FILE_PATH)
         
         general_section = configParser['GENERAL']
         LOGGING_LEVEL = general_section.get('logging_level').upper()
         
-        #DEBUG, INFO, WARNING, ERROR, CRITICAL
-        #remains set to INFO if none of the other valid log levels are specified
-        if LOGGING_LEVEL == 'INFO':
-            pass
-        elif LOGGING_LEVEL == 'DEBUG':
+        # remains set to 'INFO' if none of the other valid log levels are specified
+        if LOGGING_LEVEL == 'DEBUG':
             logger.setLevel(logging.DEBUG)
         elif LOGGING_LEVEL == 'WARNING':
             logger.setLevel(logging.WARNING)
@@ -71,7 +67,7 @@ if __name__ == "__main__":
         elif LOGGING_LEVEL == 'CRITICAL':
             logger.setLevel(logging.CRITICAL)
         
-        #note that the cron job mode is meant to be used primarily with ssh key authentication
+        # note that the cron job mode is meant to be used primarily with ssh key authentication
         CRON_JOB_MODE = general_section.getboolean('cron_job_mode')
         REST_ENDPOINT = general_section.get('rest_endpoint')
         REST_TIMEOUT = general_section.getint('rest_timeout')
@@ -89,13 +85,13 @@ if __name__ == "__main__":
     if SSH_KEY_AUTHENTICATION:
         try:
             SSH_PRIVATE_KEY = paramiko.RSAKey.from_private_key_file(SSH_PRIVATE_KEY_PATH)
-        #paramiko supports the OpenSSH private key format starting with version 2.7.1
+        # paramiko supports the OpenSSH private key format starting with version 2.7.1
         except paramiko.ssh_exception.SSHException:
-            #can be converted with 'ssh-keygen -p -m PEM -f id_rsa'
+            # can be converted with 'ssh-keygen -p -m PEM -f id_rsa'
             logger.critical('Could not parse SSH key. Either upgrade paramiko or convert your SSH key to the PEM format!')
             raise SystemExit(2)
     else:
-        #read the master password from the command line
+        # read the master password from the command line
         password = input('Please enter the master password: ')
         
         if password == '':
@@ -116,36 +112,35 @@ if __name__ == "__main__":
     
     try:
         while True:
-            #designation of the imp task
+            # designation of the imp task
             current_task_header = f'TASK{current_task_no}'
-            #reading from config file
             current_task_section = configParser[current_task_header]
-            #name of the imp task
+            # name of the imp task
             current_task_name = current_task_section.get('name')
-            #state of the imp task
+            # state of the imp task
             current_task_active = current_task_section.getboolean('active')
-            #ip address or hostname of the remote host
+            # ip address or hostname of the remote host
             current_task_ip = current_task_section.get('ip')
-            #username used for the ssh connection
+            # username used for the ssh connection
             current_task_username = current_task_section.get('username')
             if not SSH_KEY_AUTHENTICATION:
-                #encrypted password of the above user - use the password utilities script to get the encrypted text
+                # encrypted password of the above user - use the password utilities script to get the encrypted text
                 current_task_password = psw_helper.decrypt_password(password, current_task_section.get('password'))
             else:
                 current_task_password = None
-            #command or command list to be executed via ssh
+            # command or command list to be executed via ssh
             current_task_command = current_task_section.get('command')
-            #expected output of the command
+            # expected output of the command
             current_task_expected = current_task_section.get('expected')
-            #REST payload to be sent in case the command output matches expectations
+            # REST payload to be sent in case the command output matches expectations
             current_task_payload_true = json.loads(current_task_section.get('payload_true'))
-            #REST payload to be sent in case the command output does not match expectations
+            # REST payload to be sent in case the command output does not match expectations
             current_task_payload_false = json.loads(current_task_section.get('payload_false'))
-            #enables/disables pre-task REST call used to signal activity
+            # enables/disables pre-task REST call used to signal activity
             current_task_pre_task = current_task_section.getboolean('pre_task')
-            #REST payload to be sent during pre-tasks
+            # REST payload to be sent during pre-tasks
             current_task_pre_task_payload = json.loads(current_task_section.get('pre_task_payload'))
-            #time in seconds for the pre-task to run
+            # time in seconds for the pre-task to run
             current_task_pre_task_duration = current_task_section.getfloat('pre_task_duration')
             
             imp_tasks.append(imp(current_task_header, current_task_name, current_task_active, current_task_ip, 
@@ -180,16 +175,15 @@ if __name__ == "__main__":
                     sleep(imp.pre_task_duration)
                 except:
                     logger.exception(f'{imp_logger_prefix} The imp has encountered an error...')
+                    # uncomment for debugging purposes only
                     #logger.error(traceback.format_exc())
                 
                 if imp.active:
                     logger.info(f'{imp_logger_prefix} The imp is working on his task...')
                     try:
-                        #dynamically reload expected values when not in cron job mode
+                        # dynamically reload expected values when not in cron job mode
                         if not CRON_JOB_MODE:
-                            #reload config file
-                            configParser.read(conf_file_full_path)
-                            #update imp's expected value
+                            configParser.read(CONF_FILE_PATH)
                             imp.expected = configParser[imp.header].get('expected')
                         
                         imp.work()
@@ -204,6 +198,7 @@ if __name__ == "__main__":
                     
                     except:
                         logger.exception(f'{imp_logger_prefix} The imp has encountered an error...')
+                        # uncomment for debugging purposes only
                         #logger.error(traceback.format_exc())
                     
                     logger.info(f'{imp_logger_prefix} The imp has started resting...')
@@ -211,6 +206,7 @@ if __name__ == "__main__":
                         imp.rest()
                     except:
                         logger.exception(f'{imp_logger_prefix} The imp has encountered an error...')
+                        # uncomment for debugging purposes only
                         #logger.error(traceback.format_exc())
                 
                 else:
@@ -219,6 +215,7 @@ if __name__ == "__main__":
                         imp.idle()
                     except:
                         logger.exception(f'{imp_logger_prefix} The imp has encountered an error...')
+                        # uncomment for debugging purposes only
                         #logger.error(traceback.format_exc())
                 
                 logger.info(f'{imp_logger_prefix} The imp now sleeps.')

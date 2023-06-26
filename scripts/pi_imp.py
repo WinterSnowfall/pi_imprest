@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 '''
 @author: Winter Snowfall
-@version: 2.41
-@date: 30/12/2022
+@version: 2.42
+@date: 26/06/2023
 '''
 
 import paramiko
@@ -12,7 +12,7 @@ class imp:
     '''An imp - a mythical creature that sometimes does things, but mostly rests'''
     
     HEADERS = {'content-type': 'application/json'}
-    #default values, should be overwritten when creating an imp
+    # default values, should be overwritten when creating an imp
     rest_endpoint = None
     rest_timeout = 10
     ssh_private_key = None
