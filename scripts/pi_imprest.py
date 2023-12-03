@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 '''
 @author: Winter Snowfall
-@version: 2.50
-@date: 20/10/2023
+@version: 2.51
+@date: 30/11/2023
 '''
 
 import paramiko
@@ -84,12 +84,17 @@ if __name__ == "__main__":
 
     if SSH_KEY_AUTHENTICATION:
         try:
-            SSH_PRIVATE_KEY = paramiko.RSAKey.from_private_key_file(SSH_PRIVATE_KEY_PATH)
-        # paramiko supports the OpenSSH private key format starting with version 2.7.1
+            SSH_PRIVATE_KEY = paramiko.Ed25519Key.from_private_key_file(SSH_PRIVATE_KEY_PATH)
+            logger.debug('Parsed SSH key using Ed25519.')
         except paramiko.ssh_exception.SSHException:
-            # can be converted with 'ssh-keygen -p -m PEM -f id_rsa'
-            logger.critical('Could not parse SSH key. Either upgrade paramiko or convert your SSH key to the PEM format!')
-            raise SystemExit(2)
+            try:
+                SSH_PRIVATE_KEY = paramiko.RSAKey.from_private_key_file(SSH_PRIVATE_KEY_PATH)
+                logger.debug('Parsed SSH key using RSA.')
+            # paramiko supports the OpenSSH RSA private key format starting with version 2.7.1
+            except paramiko.ssh_exception.SSHException:
+                # can be converted with 'ssh-keygen -p -m PEM -f id_rsa'
+                logger.critical('Could not parse SSH key. Either upgrade paramiko or convert your SSH key to the PEM format!')
+                raise SystemExit(2)
     else:
         # read the master password from the command line
         password = input('Please enter the master password: ')
