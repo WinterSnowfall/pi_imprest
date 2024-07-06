@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 '''
 @author: Winter Snowfall
-@version: 2.51
-@date: 30/11/2023
+@version: 2.52
+@date: 04/06/2024
 '''
 
 import paramiko
@@ -124,6 +124,8 @@ if __name__ == "__main__":
             current_task_name = current_task_section.get('name')
             # state of the imp task
             current_task_active = current_task_section.getboolean('active')
+            # which payload to execute when inactive
+            current_task_inactive_payload = current_task_section.getboolean('inactive_payload')
             # ip address or hostname of the remote host
             current_task_ip = current_task_section.get('ip')
             # username used for the ssh connection
@@ -148,10 +150,10 @@ if __name__ == "__main__":
             # time in seconds for the pre-task to run
             current_task_pre_task_duration = current_task_section.getfloat('pre_task_duration')
 
-            imp_tasks.append(imp(current_task_header, current_task_name, current_task_active, current_task_ip,
-                                 current_task_username, current_task_password, current_task_command, current_task_expected,
-                                 current_task_payload_true, current_task_payload_false, current_task_pre_task,
-                                 current_task_pre_task_payload, current_task_pre_task_duration))
+            imp_tasks.append(imp(current_task_header, current_task_name, current_task_active, current_task_inactive_payload, 
+                                 current_task_ip, current_task_username, current_task_password, current_task_command, 
+                                 current_task_expected, current_task_payload_true, current_task_payload_false, 
+                                 current_task_pre_task, current_task_pre_task_payload, current_task_pre_task_duration))
             current_task_no += 1
 
     except KeyError:

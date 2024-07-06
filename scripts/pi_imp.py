@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 '''
 @author: Winter Snowfall
-@version: 2.51
-@date: 30/11/2023
+@version: 2.52
+@date: 04/06/2024
 '''
 
 import paramiko
@@ -18,11 +18,12 @@ class imp:
     ssh_private_key = None
     ssh_timeout = 10
 
-    def __init__(self, header, name, active, ip, username, password, command, expected,
-                 payload_true, payload_false, pre_task, pre_task_payload, pre_task_duration):
+    def __init__(self, header, name, active, inactive_payload, ip, username, password, command, 
+                 expected, payload_true, payload_false, pre_task, pre_task_payload, pre_task_duration):
         self.header = header
         self.name = name
         self.active = active
+        self.inactive_payload = inactive_payload
         self.ip = ip
         self.username = username
         self.password = password
@@ -81,7 +82,10 @@ class imp:
     def idle(self):
         if self.rest_endpoint is not None:
             try:
-                requests.post(self.rest_endpoint, json=self.payload_true, headers=self.HEADERS, timeout=self.rest_timeout)
+                if self.inactive_payload:
+                    requests.post(self.rest_endpoint, json=self.payload_true, headers=self.HEADERS, timeout=self.rest_timeout)
+                else:
+                    requests.post(self.rest_endpoint, json=self.payload_false, headers=self.HEADERS, timeout=self.rest_timeout)
             except:
                 raise Exception('The imp couldn\'t reach the REST endpoint!')
         else:
